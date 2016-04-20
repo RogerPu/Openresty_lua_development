@@ -1,4 +1,5 @@
 --ups_router_v3.lua
+--author rogerpux
 local headers = ngx.req.get_headers()
 local apikey = headers["apikey"]
 local redis_host = '127.0.0.1'
