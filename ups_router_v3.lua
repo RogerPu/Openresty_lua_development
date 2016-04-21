@@ -21,7 +21,7 @@ local function fetch_redis(redis_host,redis_port,key)
 	local value,err = red:get(key)
 	if not value then 
 		return fail("failed to get upstream: ",err)
-	elseif value = ngx.null then
+	elseif value == ngx.null then
 		return fail("key not found,",err)
 	end
 	return value
@@ -30,24 +30,27 @@ end
 
 
 
-local function get_upstream(apikey)
+local function get_upstream(key,redis_host,redis_port)
 
+	if not key then
+		return 
+	end
 	--SHM cache process
 	--step 1:
-	local upstream_name,err = cache:get(apikey)
+	local upstream_name,err = cache:get(key)
 	if upstream_name then 
-		ngx.var.target = upstream_name
-		return
+		return upstream_name
 	end
 
 	if err then 
 		return fail("failed to get key from shm:",err)
 	end
 
+	--//ngx.print(upstream_name)
 	--cache miss!
 	--step 2, lock the key:	
 	local lock = resty_lock:new("my_locks")
-	local elapsed,err = lock:lock(apikey)
+	local elapsed,err = lock:lock(key)
 	if not elapsed then
 		return fail("failed to acquire the lock: ",err)
 	end
@@ -56,18 +59,17 @@ local function get_upstream(apikey)
 	--step3:
 	--someone might have already put the upstream_nameue into the cache
 	--so check it here again:
-	upstream_name,err = cache:get(apikey)
+	upstream_name,err = cache:get(key)
 	if upstream_name then
 		local ok,err = lock:unlock()
 		if not ok then
 			return fail("failed to unlock: ",err)
 		end
-		ngx.var.target = upstream_name
-		return
+		return upstream_name
 	end
 	--step4:
 
-	local upstream_name = fetch_redis(redis_host,redis_port,apikey)
+	local upstream_name = fetch_redis(redis_host,redis_port,key)
 	if not upstream_name then
 		local ok,err = lock:unlock()
 		if not ok then
@@ -78,7 +80,7 @@ local function get_upstream(apikey)
 	end
 
 	--update the shm cache with the newly fetched value
-	local ok,err = cache:set(apikey,upstream_name,1)
+	local ok,err = cache:set(key,upstream_name,1)
 	if not ok then 
 		local ok,err = lock:unlock()
 		if not ok then
@@ -87,10 +89,11 @@ local function get_upstream(apikey)
 		return fail("failed to update shm cache: ",err)
 	end
 
-	local ok.err = lock:unlock()
+	local ok,err = lock:unlock()
 	if not ok then 
 		return fail("failed to unlock",err)
 	end
+	return upstream_name
 end
 
 
@@ -98,6 +101,12 @@ end
 if not apikey then
 	ngx.say("Please Offer apikey in the headers")
 end	
+
+
+local upstream = get_upstream(apikey,redis_host,redis_port)
+ngx.var.target = upstream
+--//ngx.print(upstream)       
+
 
 		
 
