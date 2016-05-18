@@ -107,24 +107,3 @@ end
 local upstream = get_upstream(apikey,redis_host,redis_port)
 ngx.var.target = upstream
 --//ngx.print(upstream)       
-
-
-		
-
-
-
-
-
-
-			
-	
-
-
-
-
-
-
-
-
-
-
