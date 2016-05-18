@@ -25,6 +25,7 @@ local function fetch_redis(redis_host,redis_port,key)
 		return fail("key not found,",err)
 	end
 	return value
+	red:close()
 
 end
 
