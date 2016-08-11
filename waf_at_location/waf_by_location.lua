@@ -1,11 +1,11 @@
 -- @Author: RogerPu
 -- @Date:   2016-08-09 11:44:57
 -- @Last Modified by:   RogerPu
--- @Last Modified time: 2016-08-11 15:02:02
+-- @Last Modified time: 2016-08-11 15:13:36
 
 uri_black = {'/icac','/plateno'}
 CCDeny=true
-CCrate="10/10" -- 100 counts, per 60 sec.
+CCrate="10/10" -- 10 counts, per 10 sec.
 
 
 function get_client_ip()
@@ -30,7 +30,7 @@ function ccdeny(uri)
 			limit:incr(token,1)
 		end 
 	else 
-		limit:set(token,2,CCseconds)
+		limit:set(token,2,CCseconds) --shared dict data will flush in 60 seconds default
 	end
 	return false
 end
@@ -41,7 +41,6 @@ function main()
 		for _,rules in pairs(uri_black) do
 			if rules ~= nil then
 				if ngx.re.match(uri,rules,"isjo") then
-					-- ngx.log(ngx.ERR,"start ccdeny: ",uri)
 					ccdeny(uri)					
 				end
 			end
